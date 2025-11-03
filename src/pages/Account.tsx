@@ -18,7 +18,7 @@ export default function AccountApp() {
     country: '',
   });
 
-  // Initialize formData when user changes
+ 
   useEffect(() => {
     if (user) {
       setFormData({
@@ -49,12 +49,12 @@ export default function AccountApp() {
       setError('');
       setLoading(true);
 
-      // Simulate API call
+      
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (isLogin) {
         if (password.length >= 6) {
-          // Create user object for existing user
+          
           const userData = {
             name: name || email.split('@')[0],
             email: email,
@@ -88,7 +88,7 @@ export default function AccountApp() {
           return;
         }
         if (password.length >= 6) {
-          // Create user object for new user
+        
           const userData = {
             name: name,
             email: email,
@@ -350,14 +350,14 @@ export default function AccountApp() {
         createdAt: user?.createdAt || new Date().toISOString(),
       };
       
-      // Use AuthContext updateUser
+      
       updateUser(updatedUser);
       setIsEditing(false);
     };
 
     const handleCancel = () => {
       setIsEditing(false);
-      // Reset form data to current user data
+      
       if (user) {
         setFormData({
           name: user.name || '',
@@ -373,7 +373,7 @@ export default function AccountApp() {
     };
 
     const handleLogout = () => {
-      // Use AuthContext logout
+    
       logout();
       setFormData({
         name: '',
@@ -387,7 +387,7 @@ export default function AccountApp() {
       });
     };
 
-    // If not logged in, show login prompt
+    
     if (!isAuthenticated || !user) {
       return (
         <div className="min-h-screen bg-[#fafaf9] pt-28 pb-20">
@@ -728,7 +728,7 @@ export default function AccountApp() {
     );
   };
 
-  // Render current page
+  
   return (
     <>
       {currentPage === 'login' ? <LoginPage /> : <AccountPage />}

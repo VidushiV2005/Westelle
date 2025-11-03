@@ -6,6 +6,7 @@ interface CartItem {
   price: number;
   image: string;
   qty: number;
+  size?: string;
 }
 
 interface CartContextType {
@@ -25,15 +26,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (product: Omit<CartItem, 'qty'>) => {
     setItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+
+      const cartItemId = product.size ? `${product.id}-${product.size}` : product.id;
+      
+      
+      const existingItem = prevItems.find(item => {
+        const itemCartId = item.size ? `${item.id.toString().split('-')[0]}-${item.size}` : item.id;
+        return itemCartId === cartItemId;
+      });
+      
       if (existingItem) {
-        return prevItems.map(item =>
-          item.id === product.id
+       
+        return prevItems.map(item => {
+          const itemCartId = item.size ? `${item.id.toString().split('-')[0]}-${item.size}` : item.id;
+          return itemCartId === cartItemId
             ? { ...item, qty: item.qty + 1 }
-            : item
-        );
+            : item;
+        });
+      } else {
+       
+        return [...prevItems, { 
+          ...product, 
+          id: cartItemId,  
+          qty: 1 
+        }];
       }
-      return [...prevItems, { ...product, qty: 1 }];
     });
   };
 

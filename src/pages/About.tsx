@@ -58,7 +58,7 @@ export default function About() {
 
   return (
     <div className="bg-white">
-      {/* Hero Section - Royal & Elegant */}
+      {/* Hero Section */}
       <section className="relative min-h-screen bg-white pt-24">
         {/* Back Button */}
         <motion.button

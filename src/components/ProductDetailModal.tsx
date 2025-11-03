@@ -48,6 +48,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }: Product
         name: product.name,
         price: product.price,
         image: product.image,
+         size: selectedSize,
       });
     }
 

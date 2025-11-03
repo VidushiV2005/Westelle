@@ -1,16 +1,75 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useState } from "react";
-import { Heart, User } from "lucide-react";
+import { Heart, User, X } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import ProductDetailModal from '@/components/ProductDetailModal';
 import { products, ProductDetail } from '@/data/productData';
 
-// Select specific products for different sections
+
 const featured = products.slice(0, 4);
 const showcaseProducts = products.slice(4, 10);
 const galleryProducts = products.slice(10, 18);
+
+
+function SizeSelector({ 
+  sizes, 
+  selectedSize, 
+  onSelectSize, 
+  onClose,
+  onAddToCart 
+}: { 
+  sizes: string[]; 
+  selectedSize: string | null;
+  onSelectSize: (size: string) => void;
+  onClose: () => void;
+  onAddToCart: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white p-8 rounded-sm shadow-2xl max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-300">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-serif text-neutral-900">Select Size</h3>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-900 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <p className="text-sm text-neutral-600 mb-6 font-light tracking-wide">
+          Please select a size to add this item to your cart
+        </p>
+
+        <div className="grid grid-cols-5 gap-3 mb-8">
+          {sizes.map((size) => (
+            <button
+              key={size}
+              onClick={() => onSelectSize(size)}
+              className={`py-3 text-sm tracking-wider transition-all duration-300 ${
+                selectedSize === size
+                  ? 'bg-neutral-900 text-white shadow-lg scale-105'
+                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+              }`}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={onAddToCart}
+          disabled={!selectedSize}
+          className="w-full bg-neutral-900 text-white py-4 text-xs tracking-[0.3em] uppercase font-light transition-all duration-300 hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-neutral-900"
+        >
+          {selectedSize ? 'Add to Cart' : 'Select a Size'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function ProductCard({ product, showActions = true, onViewDetails }: { 
   product: ProductDetail; 
@@ -19,21 +78,42 @@ function ProductCard({ product, showActions = true, onViewDetails }: {
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [added, setAdded] = useState(false);
+  const [showSizeSelector, setShowSizeSelector] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const inWishlist = isInWishlist(product.id);
 
-  const handleAddToCart = () => {
+  const handleAddToCartClick = () => {
+    setShowSizeSelector(true);
+  };
+
+  const handleSizeSelected = (size: string) => {
+    setSelectedSize(size);
+  };
+
+  const handleConfirmAddToCart = () => {
+    if (!selectedSize) return;
+
     addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.image,
+      size: selectedSize,
     });
+    
+    setShowSizeSelector(false);
     setAdded(true);
+    setSelectedSize(null);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleCloseSizeSelector = () => {
+    setShowSizeSelector(false);
+    setSelectedSize(null);
   };
 
   const handleToggleWishlist = () => {
@@ -50,114 +130,126 @@ function ProductCard({ product, showActions = true, onViewDetails }: {
   };
 
   return (
-    <motion.div
-      className="group cursor-pointer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.4 }}
-    >
-      
-      {added && (
-        <div className="fixed left-1/2 top-24 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-emerald-600 text-white px-8 py-3 rounded-sm shadow-2xl">
-            <p className="text-sm tracking-[0.2em] uppercase font-light">Added to Cart</p>
-          </div>
-        </div>
+    <>
+      {/* Size Selector Modal */}
+      {showSizeSelector && (
+        <SizeSelector
+          sizes={product.availableSizes || ['XS', 'S', 'M', 'L', 'XL']}
+          selectedSize={selectedSize}
+          onSelectSize={handleSizeSelected}
+          onClose={handleCloseSizeSelector}
+          onAddToCart={handleConfirmAddToCart}
+        />
       )}
 
-     
-      <div className="relative mb-6 overflow-hidden bg-neutral-50 shadow-md hover:shadow-2xl transition-all duration-700">
-        <div className="aspect-[3/4]">
-          <img
-            src={product.image}
-            alt={product.name}
-            className={`h-full w-full object-cover transition-all duration-700 ${
-              isHovered ? "scale-110 brightness-95" : "scale-100"
-            }`}
-          />
-        </div>
-
-        {/* Gradient Overlay */}
-        <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-opacity duration-700 ${
-            isHovered ? "opacity-100" : "opacity-0"
-          }`}
-        />
-
-        {showActions && (
-          <>
-            {/* Wishlist Button */}
-            <button
-              onClick={handleToggleWishlist}
-              aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
-              className={`absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-md transition-all duration-500 hover:scale-110 ${
-                isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-              } ${
-                inWishlist
-                  ? "bg-rose-500 text-white shadow-lg"
-                  : "bg-white/95 text-neutral-800 hover:bg-white shadow-md"
-              }`}
-            >
-              <Heart
-                className="h-5 w-5"
-                fill={inWishlist ? "currentColor" : "none"}
-                strokeWidth={1.5}
-              />
-            </button>
-
-            {/*  Add to Cart Button */}
-            <div
-              className={`absolute inset-x-0 bottom-0 p-6 transition-all duration-700 ${
-                isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-              }`}
-            >
-              <button
-                onClick={handleAddToCart}
-                disabled={added}
-                className="w-full bg-white/95 backdrop-blur-sm py-4 text-xs tracking-[0.3em] uppercase text-neutral-900 font-light transition-all duration-300 hover:bg-white hover:shadow-xl disabled:bg-emerald-500 disabled:text-white"
-              >
-                {added ? "Added to Cart" : "Add to Cart"}
-              </button>
+      <motion.div
+        className="group cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        whileHover={{ y: -6 }}
+        transition={{ duration: 0.4 }}
+      >
+        
+        {added && (
+          <div className="fixed left-1/2 top-24 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="bg-emerald-600 text-white px-8 py-3 rounded-sm shadow-2xl">
+              <p className="text-sm tracking-[0.2em] uppercase font-light">Added to Cart</p>
             </div>
-          </>
+          </div>
         )}
-      </div>
-
-      {/* Product Info Section */}
-      <div className="space-y-3 px-1">
-        <h3 className="font-serif text-xl text-neutral-900 tracking-tight transition-colors duration-300 group-hover:text-neutral-600">
-          {product.name}
-        </h3>
 
        
-        <div
-          className={`overflow-hidden transition-all duration-500 ${
-            isHovered ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <p className="text-sm text-neutral-600 leading-relaxed font-light tracking-wide">
-            {product.description}
-          </p>
-        </div>
+        <div className="relative mb-6 overflow-hidden bg-neutral-50 shadow-md hover:shadow-2xl transition-all duration-700">
+          <div className="aspect-[3/4]">
+            <img
+              src={product.image}
+              alt={product.name}
+              className={`h-full w-full object-cover transition-all duration-700 ${
+                isHovered ? "scale-110 brightness-95" : "scale-100"
+              }`}
+            />
+          </div>
 
-        <div className="pt-2 flex items-center justify-between">
-          <p className="font-light text-lg text-neutral-900 tracking-wide">
-            ${product.price.toLocaleString()}
-          </p>
-
-          {/* View Details Button */}
-          <button
-            onClick={onViewDetails}
-            className={`text-xs tracking-[0.2em] uppercase text-neutral-500 transition-all duration-300 hover:text-neutral-900 ${
+          {/* Gradient Overlay */}
+          <div
+            className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-opacity duration-700 ${
               isHovered ? "opacity-100" : "opacity-0"
             }`}
-          >
-            Details →
-          </button>
+          />
+
+          {showActions && (
+            <>
+              {/* Wishlist Button */}
+              <button
+                onClick={handleToggleWishlist}
+                aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                className={`absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-md transition-all duration-500 hover:scale-110 ${
+                  isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+                } ${
+                  inWishlist
+                    ? "bg-rose-500 text-white shadow-lg"
+                    : "bg-white/95 text-neutral-800 hover:bg-white shadow-md"
+                }`}
+              >
+                <Heart
+                  className="h-5 w-5"
+                  fill={inWishlist ? "currentColor" : "none"}
+                  strokeWidth={1.5}
+                />
+              </button>
+
+              {/*  Add to Cart Button */}
+              <div
+                className={`absolute inset-x-0 bottom-0 p-6 transition-all duration-700 ${
+                  isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                }`}
+              >
+                <button
+                  onClick={handleAddToCartClick}
+                  className="w-full bg-white/95 backdrop-blur-sm py-4 text-xs tracking-[0.3em] uppercase text-neutral-900 font-light transition-all duration-300 hover:bg-white hover:shadow-xl"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </>
+          )}
         </div>
-      </div>
-    </motion.div>
+
+        {/* Product Info Section */}
+        <div className="space-y-3 px-1">
+          <h3 className="font-serif text-xl text-neutral-900 tracking-tight transition-colors duration-300 group-hover:text-neutral-600">
+            {product.name}
+          </h3>
+
+         
+          <div
+            className={`overflow-hidden transition-all duration-500 ${
+              isHovered ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <p className="text-sm text-neutral-600 leading-relaxed font-light tracking-wide">
+              {product.description}
+            </p>
+          </div>
+
+          <div className="pt-2 flex items-center justify-between">
+            <p className="font-light text-lg text-neutral-900 tracking-wide">
+              ${product.price.toLocaleString()}
+            </p>
+
+            {/* View Details Button */}
+            <button
+              onClick={onViewDetails}
+              className={`text-xs tracking-[0.2em] uppercase text-neutral-500 transition-all duration-300 hover:text-neutral-900 ${
+                isHovered ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              Details →
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </>
   );
 }
 
@@ -692,90 +784,90 @@ export default function Home() {
       </section>
 
       {/* Exclusive Members Section - Login CTA */}
-<section className="py-32 bg-neutral-900 text-white relative overflow-hidden">
-  <div className="absolute inset-0 opacity-5">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
-  </div>
-  
-  <div className="container mx-auto px-8 lg:px-16 relative z-10">
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="max-w-4xl mx-auto text-center space-y-8"
-    >
-      <div className="inline-block">
-        <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/50 to-transparent mx-auto mb-10"></div>
-      </div>
-      
-      <h2 className="font-serif text-5xl lg:text-6xl tracking-wide">
-        Become a Westelle Member
-      </h2>
-      
-      <p className="text-lg lg:text-xl text-white/80 font-light tracking-wide leading-relaxed max-w-2xl mx-auto">
-        Join our exclusive community and enjoy personalized styling, early access to new collections, and special member-only benefits
-      </p>
-
-      <div className="pt-6 grid gap-6 md:grid-cols-3 max-w-3xl mx-auto text-left">
-        <div className="space-y-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-            </svg>
-          </div>
-          <h3 className="text-sm font-medium tracking-wide">Exclusive Access</h3>
-          <p className="text-xs text-white/70 font-light leading-relaxed">
-            First to shop new arrivals and limited editions
-          </p>
+      <section className="py-32 bg-neutral-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
         </div>
-
-        <div className="space-y-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
-          </div>
-          <h3 className="text-sm font-medium tracking-wide">Personal Styling</h3>
-          <p className="text-xs text-white/70 font-light leading-relaxed">
-            Complimentary consultations with our expert stylists
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-            </svg>
-          </div>
-          <h3 className="text-sm font-medium tracking-wide">Special Offers</h3>
-          <p className="text-xs text-white/70 font-light leading-relaxed">
-            Member-only promotions and birthday surprises
-          </p>
-        </div>
-      </div>
-
-      <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <button
-          onClick={() => navigate('/login')}
-          className="group relative px-12 py-4 bg-white text-neutral-900 text-xs tracking-[0.3em] uppercase font-light overflow-hidden transition-all duration-300 hover:bg-white/90"
-        >
-          <span className="relative z-10">Create Account</span>
-        </button>
         
-        <button
-          onClick={() => navigate('/login')}
-          className="px-12 py-4 border-2 border-white/30 text-white text-xs tracking-[0.3em] uppercase font-light transition-all duration-300 hover:bg-white hover:text-neutral-900 hover:border-white"
-        >
-          Sign In
-        </button>
-      </div>
+        <div className="container mx-auto px-8 lg:px-16 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto text-center space-y-8"
+          >
+            <div className="inline-block">
+              <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/50 to-transparent mx-auto mb-10"></div>
+            </div>
+            
+            <h2 className="font-serif text-5xl lg:text-6xl tracking-wide">
+              Become a Westelle Member
+            </h2>
+            
+            <p className="text-lg lg:text-xl text-white/80 font-light tracking-wide leading-relaxed max-w-2xl mx-auto">
+              Join our exclusive community and enjoy personalized styling, early access to new collections, and special member-only benefits
+            </p>
 
-      <p className="text-xs text-white/50 tracking-wide pt-4">
-        Already a member? Sign in to access your account
-      </p>
-    </motion.div>
-  </div>
-</section>
+            <div className="pt-6 grid gap-6 md:grid-cols-3 max-w-3xl mx-auto text-left">
+              <div className="space-y-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium tracking-wide">Exclusive Access</h3>
+                <p className="text-xs text-white/70 font-light leading-relaxed">
+                  First to shop new arrivals and limited editions
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium tracking-wide">Personal Styling</h3>
+                <p className="text-xs text-white/70 font-light leading-relaxed">
+                  Complimentary consultations with our expert stylists
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium tracking-wide">Special Offers</h3>
+                <p className="text-xs text-white/70 font-light leading-relaxed">
+                  Member-only promotions and birthday surprises
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={() => navigate('/login')}
+                className="group relative px-12 py-4 bg-white text-neutral-900 text-xs tracking-[0.3em] uppercase font-light overflow-hidden transition-all duration-300 hover:bg-white/90"
+              >
+                <span className="relative z-10">Create Account</span>
+              </button>
+              
+              <button
+                onClick={() => navigate('/login')}
+                className="px-12 py-4 border-2 border-white/30 text-white text-xs tracking-[0.3em] uppercase font-light transition-all duration-300 hover:bg-white hover:text-neutral-900 hover:border-white"
+              >
+                Sign In
+              </button>
+            </div>
+
+            <p className="text-xs text-white/50 tracking-wide pt-4">
+              Already a member? Sign in to access your account
+            </p>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 }

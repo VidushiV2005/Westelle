@@ -2,20 +2,70 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import ProductDetailModal from "@/components/ProductDetailModal";
 
 export default function Wishlist() {
   const navigate = useNavigate();
   const { items, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [shouldRemoveFromWishlist, setShouldRemoveFromWishlist] = useState(false);
+  const [showSizeAlert, setShowSizeAlert] = useState(false);
 
-  const handleMoveToCart = (item: any) => {
-    addToCart({
+  const handleMoveToCart = (item: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowSizeAlert(true);
+    setTimeout(() => setShowSizeAlert(false), 2500);
+    setShouldRemoveFromWishlist(true);
+    const productWithDetails = {
       id: item.id,
       name: item.name,
       price: item.price,
       image: item.image,
-    });
-    removeFromWishlist(item.id);
+      description: item.description || 'A beautiful piece from our curated collection, crafted with attention to detail and quality materials.',
+      fabric: item.fabric || 'Premium Quality Fabric',
+      color: item.color || 'As Shown',
+      fitType: item.fitType || 'Regular Fit',
+      length: item.length || 'Standard Length',
+      availableSizes: item.availableSizes || ['XS', 'S', 'M', 'L', 'XL'],
+      closure: item.closure || 'Standard Closure',
+      careInstructions: item.careInstructions || 'Hand wash or dry clean recommended. Do not bleach. Iron on low heat.',
+      occasion: item.occasion || 'Casual & Formal',
+    };
+    setSelectedProduct(productWithDetails);
+    setIsModalOpen(true);
+  };
+
+  const handleProductClick = (item: any) => {
+    // Ensure the product has all required fields for the modal
+    const productWithDetails = {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      description: item.description || 'A beautiful piece from our curated collection, crafted with attention to detail and quality materials.',
+      fabric: item.fabric || 'Premium Quality Fabric',
+      color: item.color || 'As Shown',
+      fitType: item.fitType || 'Regular Fit',
+      length: item.length || 'Standard Length',
+      availableSizes: item.availableSizes || ['XS', 'S', 'M', 'L', 'XL'],
+      closure: item.closure || 'Standard Closure',
+      careInstructions: item.careInstructions || 'Hand wash or dry clean recommended. Do not bleach. Iron on low heat.',
+      occasion: item.occasion || 'Casual & Formal',
+    };
+    setSelectedProduct(productWithDetails);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
+    if (shouldRemoveFromWishlist && selectedProduct) {
+      removeFromWishlist(selectedProduct.id);
+    }
+    setShouldRemoveFromWishlist(false);
   };
 
   return (
@@ -77,7 +127,10 @@ export default function Wishlist() {
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   className="group relative"
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-neutral-100">
+                  <div 
+                    className="relative aspect-[3/4] overflow-hidden bg-neutral-100 cursor-pointer"
+                    onClick={() => handleProductClick(item)}
+                  >
                     <img
                       src={item.image}
                       alt={item.name}
@@ -87,7 +140,10 @@ export default function Wishlist() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
                     <button
-                      onClick={() => removeFromWishlist(item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromWishlist(item.id);
+                      }}
                       className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm opacity-0 transition-all duration-300 hover:bg-red-500 hover:text-white group-hover:opacity-100"
                       aria-label="Remove from wishlist"
                     >
@@ -98,7 +154,7 @@ export default function Wishlist() {
 
                     <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                       <button
-                        onClick={() => handleMoveToCart(item)}
+                        onClick={(e) => handleMoveToCart(item, e)}
                         className="w-full bg-white py-3 text-xs tracking-[0.3em] text-black transition-all duration-300 hover:bg-black hover:text-white"
                       >
                         MOVE TO CART
@@ -106,7 +162,10 @@ export default function Wishlist() {
                     </div>
                   </div>
 
-                  <div className="mt-4">
+                  <div 
+                    className="mt-4 cursor-pointer"
+                    onClick={() => handleProductClick(item)}
+                  >
                     <h3 className="text-sm tracking-wide text-neutral-800">{item.name}</h3>
                     <p className="mt-2 font-serif text-base text-black">${item.price.toLocaleString()}</p>
                   </div>
@@ -135,6 +194,15 @@ export default function Wishlist() {
           </motion.div>
         )}
       </div>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 }

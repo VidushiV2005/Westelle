@@ -1,19 +1,73 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import ProductDetailModal from '@/components/ProductDetailModal';
+import { products, ProductDetail } from '@/data/productData';
 
 export default function Cart() {
   const navigate = useNavigate();
   const { items, totalPrice, updateQty, removeFromCart } = useCart();
+  const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     console.log("Cart items:", items);
     console.log("Total items:", items.length);
   }, [items]);
 
+  const handleProductClick = (item: any) => {
+    console.log("Clicked item:", item);
+    console.log("All products:", products);
+    
+  
+    let baseProductId = item.id;
+    if (item.id.includes('-') && item.size) {
+      
+      const parts = item.id.split('-');
+      parts.pop(); 
+      baseProductId = parts.join('-');
+    }
+    
+    
+    let product = products.find(p => p.id === baseProductId);
+    
+    
+    if (!product) {
+      product = products.find(p => p.id === item.id);
+    }
+    
+  
+    if (!product) {
+      product = products.find(p => p.name === item.name);
+    }
+    
+    console.log("Found product:", product);
+    
+    if (product) {
+      setSelectedProduct(product);
+      setIsModalOpen(true);
+    } else {
+      console.error("Product not found for item:", item);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedProduct(null), 300);
+  };
+
   return (
     <div className="min-h-screen bg-[#fafaf9] pt-28 pb-20">
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
+
       <div className="container mx-auto px-8 lg:px-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -73,7 +127,10 @@ export default function Cart() {
                     className="group mb-6 border-b border-neutral-200 pb-6 last:border-b-0"
                   >
                     <div className="flex gap-6">
-                      <div className="relative h-32 w-24 flex-shrink-0 overflow-hidden bg-neutral-100">
+                      <div 
+                        onClick={() => handleProductClick(item)}
+                        className="relative h-32 w-24 flex-shrink-0 overflow-hidden bg-neutral-100 cursor-pointer"
+                      >
                         <img
                           src={item.image}
                           alt={item.name}
@@ -83,7 +140,20 @@ export default function Cart() {
 
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
-                          <h3 className="text-lg tracking-wide text-neutral-900">{item.name}</h3>
+                          <h3 
+                            onClick={() => handleProductClick(item)}
+                            className="text-lg tracking-wide text-neutral-900 cursor-pointer hover:text-neutral-600 transition-colors"
+                          >
+                            {item.name}
+                          </h3>
+                          
+                          {/* Display Size */}
+                          {item.size && (
+                            <p className="mt-1 text-sm text-neutral-500">
+                              Size: <span className="font-medium text-neutral-700">{item.size}</span>
+                            </p>
+                          )}
+                          
                           <p className="mt-2 font-serif text-xl text-black">
                             ${item.price.toLocaleString()}
                           </p>
