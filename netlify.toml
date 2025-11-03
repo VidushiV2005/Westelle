@@ -1,15 +1,9 @@
 [build]
-  command = "npm run build:client"
-  functions = "netlify/functions"
+  command = "npm run build"
   publish = "dist/spa"
 
-
-[functions]
-  external_node_modules = ["express"]
-  node_bundler = "esbuild"
-  
+# Handle React Router client-side routes (important for Vite + React apps)
 [[redirects]]
-  force = true
-  from = "/api/*"
+  from = "/*"
+  to = "/index.html"
   status = 200
-  to = "/.netlify/functions/api/:splat"
